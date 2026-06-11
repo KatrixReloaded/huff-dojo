@@ -1,0 +1,29 @@
+// Huff Dojo Advanced level 1: Function Gate
+// Calldata starts with selector 0xdeadbeef. If it matches, return uint256(0x42). Otherwise revert.
+
+// Challenge 1: The Single-Function Dispatcher
+//
+// Time to apply everything. A real Huff contract routes incoming calls by selector.
+// You have learned all the pieces:
+//   - CALLDATALOAD + SHR to extract the 4-byte selector
+//   - EQ + JUMPI to branch on a match
+//   - MSTORE + RETURN to send back a value
+//   - REVERT as the fallback for unknown selectors
+//
+// Combine them: extract → compare → branch → return, with REVERT before the branch target.
+//
+// Calldata: 0xdeadbeef followed by 28 zero bytes (padded to 32).
+
+// Pre-written deployment wrapper.
+// Leave this alone while learning MAIN; hnc's default constructor returns MAIN as runtime bytecode.
+#define macro CONSTRUCTOR() = takes(0) returns(0) {
+}
+
+#define macro MAIN() = takes(0) returns(0) {
+    // Optional Solidity-style memory convention:
+    // 0x80 0x40 mstore    // free memory pointer = 0x80
+    //
+    // Your level body goes below.
+    // Write your level solution here.
+    // Example style: 0x2a 0x00 mstore 0x20 0x00 return
+}

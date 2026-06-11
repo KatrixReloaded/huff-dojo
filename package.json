@@ -1,0 +1,17 @@
+{
+  "name": "huff-dojo",
+  "version": "1.0.0",
+  "description": "A CLI puzzle game for learning EVM opcodes and Huff-style bytecode thinking.",
+  "type": "module",
+  "bin": {
+    "huff-dojo": "./bin/huff-dojo.js"
+  },
+  "scripts": {
+    "start": "node ./bin/huff-dojo.js",
+    "test": "node ./bin/huff-dojo.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

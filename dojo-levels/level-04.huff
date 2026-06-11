@@ -1,0 +1,33 @@
+// Huff Dojo Basic level 4: DUP and SWAP
+// Starting stack is [0xbb, 0xaa] with 0xbb on top. Swap so 0xaa is on top, then duplicate it. Leave [0xaa, 0xaa, 0xbb].
+
+// Lesson 4: DUP and SWAP — rearranging the stack
+//
+// DUP1–DUP16 copy a stack item and push the copy on top.
+//   DUP1 — copies the top item        DUP2 — copies one below the top
+//   DUP3 — copies two below … and so on up to DUP16
+// The originals are never removed — DUP only adds a copy.
+//
+// SWAP1–SWAP16 exchange the top item with a deeper item.
+//   SWAP1 — top ↔ depth 1 (item directly below)
+//   SWAP2 — top ↔ depth 2  … and so on up to SWAP16
+// SWAP does not add or remove items — it only reorders.
+//
+// Together, DUP and SWAP let you route values to wherever an opcode needs them.
+// SUB needs its operands in a specific order, MSTORE needs offset on top — SWAPs fix that.
+//
+// For this level: swap 0xbb and 0xaa so 0xaa is on top, then DUP it.
+
+// Pre-written deployment wrapper.
+// Leave this alone while learning MAIN; hnc's default constructor returns MAIN as runtime bytecode.
+#define macro CONSTRUCTOR() = takes(0) returns(0) {
+}
+
+#define macro MAIN() = takes(0) returns(0) {
+    // Optional Solidity-style memory convention:
+    // 0x80 0x40 mstore    // free memory pointer = 0x80
+    //
+    // Your level body goes below.
+    // Write your level solution here.
+    // Example style: 0x2a 0x00 mstore 0x20 0x00 return
+}
