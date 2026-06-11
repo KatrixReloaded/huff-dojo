@@ -3213,6 +3213,7 @@ async function interactive() {
 
     if (!fs.existsSync(resolved)) {
       writeTemplate(level, resolved, settings, false, false);
+      suppressNextWatchEventFor = resolved;
       output.write(`${successText("Created")} ${path.basename(resolved)} — edit it to solve the level.\n`);
     }
 
@@ -3220,12 +3221,12 @@ async function interactive() {
       watcher = fs.watch(resolved, () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          process.stdout.write("\r\x1b[2K"); // clear current prompt line
           try {
             if (suppressNextWatchEventFor === resolved) {
               suppressNextWatchEventFor = null;
               return;
             }
+            process.stdout.write("\r\x1b[2K"); // clear current prompt line
             const result = renderHuffFileResult(level, resolved, settings);
             output.write(result.text + "\n");
             if (result.wins) {
@@ -3236,7 +3237,8 @@ async function interactive() {
           } catch (err) {
             output.write(`\nERROR: ${err.message}\n`);
           }
-          if (rl.line) rl.write(null, { ctrl: true, name: "u" });
+          rl.write(null, { ctrl: true, name: "u" });
+          acRender();
         }, 300);
       });
       watcher.on("error", stopWatching);
@@ -3324,15 +3326,11 @@ async function interactive() {
           completed.clear();
           saveProgress(completed, currentMode);
           level = levels[0];
-          // Stop the watcher before bulk writes so no write triggers a check.
           stopWatching();
           for (const l of levels) {
             const fp = path.resolve(defaultLevelPath(l, currentMode));
-            if (fs.existsSync(fp)) {
-              try { writeTemplate(l, fp, settings, false, true); } catch { /* ignore */ }
-            }
+            try { fs.rmSync(fp); } catch { /* ignore if missing */ }
           }
-          // Suppress any delayed OS event from the level-1 write.
           suppressNextWatchEventFor = path.resolve(defaultLevelPath(level, currentMode));
           output.write(`\n${warningText("Progress wiped.")} Starting from level 1.\n`);
           output.write(`${progressBar(0, levels.length)}\n`);
