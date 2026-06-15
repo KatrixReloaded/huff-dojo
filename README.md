@@ -1,6 +1,6 @@
 # Huff Dojo
 
-A zero-dependency CLI game for learning EVM opcodes and Huff-style stack thinking.
+A zero-dependency CLI game for learning EVM opcodes and Huff from scratch.
 
 Huff Dojo has two separate tracks:
 
@@ -9,26 +9,26 @@ Huff Dojo has two separate tracks:
 | Basic | Learn Huff and EVM opcodes from scratch, one concept at a time. |
 | Advanced | Solve larger challenges using the opcodes learned in Basic. |
 
-Each track has its own level files and saved progress, so Basic and Advanced behave like separate game instances. The game watches your file — save from any editor and results appear instantly.
+Each track has its own level files and saved progress. The game watches your file — save from any editor and results appear instantly.
 
 ## Quick start
 
 ```bash
-cd ~/Desktop/Learning/huff-dojo
+cd path/to/huff-dojo
 npm start
 ```
 
-On startup, choose `Basic` or `Advanced`. The game creates the first file for that track and starts watching it. Open the file in your editor of choice, write the solution in the `MAIN` body, and save. The game compiles, checks, and advances automatically.
+On startup, choose `Basic` or `Advanced`. The game creates the first level file and starts watching it. Write the solution in the `MAIN` body and save — the game compiles, checks, and advances automatically.
 
-Basic files are named `dojo-levels/level-XX.huff`; Advanced files are named `dojo-levels/advanced-XX.huff`.
+Basic files are named `dojo-levels/level-XX.huff`; Advanced files are `dojo-levels/advanced-XX.huff`. Files are created on demand as you reach each level and deleted when you reset progress.
 
 If you prefer not to leave the terminal, `:code` opens a built-in TUI editor:
 
 ```
-[✓1] > :code
+[B 1] > :code
 ```
 
-`^S` inside the editor saves and checks. `^C` cancels.
+`^S` saves and checks. `^C` cancels without saving.
 
 ## Prerequisites
 
@@ -52,41 +52,42 @@ anvil
 
 ## Levels
 
-Levels are split across two tracks:
+| Track | Levels | Topics |
+|-------|--------|--------|
+| Basic | 33 | Stack, arithmetic, bitwise ops, shifts, calldata, memory, storage, conditional and unconditional jumps, Huff MAIN macro, helper macros, selectors, all context and block opcodes, CALLDATACOPY, MSTORE8/MSIZE, LOG opcodes, ABI events, custom errors, Huff constants, `__FUNC_SIG`, `__BYTES`/`__RIGHTPAD`, `FREE_STORAGE_POINTER` |
+| Advanced | 12 | Single and multi-function dispatchers, guarded arithmetic, ABI calldata, auth gates, persistent counters, event emission, calldata echo, multi-word returns, packed storage, branching, custom error reverts |
 
-| Track | Current lessons |
-|-------|-----------------|
-| Basic | 33 lessons covering stack basics, arithmetic, calldata, memory, storage, conditional and unconditional jumps, helper macros, selectors, context opcodes, ABI events, custom errors, and compile-time builtins |
-| Advanced | 12 challenges covering dispatchers, routing, guarded arithmetic, auth gates, counters, event logs, calldata echoes, packed storage, and custom errors |
-
-Use `:levels` to see the levels in the current track with completion marks. Use `:mode basic` or `:mode advanced` to switch tracks.
+Use `:levels` to see all levels with completion marks. Use `:mode basic` or `:mode advanced` to switch tracks.
 
 ## Workflow
 
 ### File-watch mode (default)
 
-The game watches the current track's Huff file in the background. Edit the `MAIN` body in any editor — VS Code, vim, nano — and save. Results appear in the game terminal within a third of a second:
+The game watches the current level file. Edit the `MAIN` body in any editor — VS Code, vim, nano — and save. Results appear within a third of a second:
 
 ```
-Watching level-07.huff — edit and save to check automatically.
+[B 7] >
+  File .../dojo-levels/level-07.huff
+  Bytecode 0x6002600360…  (12 bytes)
 
-[✓7] >
-Huff file: .../level-07.huff
-Compiled bytecode: 0x6002a6000...
+  ══════════════════════════════════════════════════════════
+  ✓  Level 7 cleared — Congratulations!
+  ══════════════════════════════════════════════════════════
 
-PASS
-Steps: 4 | Instructions: 4
-Stack: []
-Return: 0x000000000000000000000000000000000000000000000000000000000000002a
+  Steps: 4   Instructions: 4   Stack: ["0x2a"]
 
-Level 7 cleared. (7/33 done) Moving to level 8.
-[█████░░░░░░░░░░░░░░░░░░░] 7/33 (21%)
+  7 of 33 complete.
+
+  ──────────────────────────────────────────────────────
+  Up Next  Level 8: Toggle and Invert
+  ──────────────────────────────────────────────────────
+[████░░░░░░░░░░░░░░░░░░░░] 7/33 (21%)
 ```
 
 ### Built-in TUI editor
 
 ```
-[✓7] > :code
+[B 7] > :code
 ```
 
 Full-screen editor inside the terminal. Line numbers, auto-indent, scroll. Key bindings:
@@ -95,11 +96,18 @@ Full-screen editor inside the terminal. Line numbers, auto-indent, scroll. Key b
 |-----|--------|
 | `^S` | Save, compile, and check |
 | `^C` | Cancel without saving |
+| `Enter` | Insert newline and annotate the current line with the stack state at that point |
 | Arrow keys | Move cursor |
 | `Tab` | Insert 4 spaces |
 | `Home` / `End` | Start / end of line |
 | `Delete` | Delete character forward |
 | `Backspace` | Delete character backward |
+
+The `Enter` stack annotation writes a `// [...]` comment at the end of the current line showing what the stack looks like after the code on that line executes. This lets you track stack state line-by-line as you write.
+
+### Command autocomplete
+
+Typing `:` at the prompt shows a dropdown of matching commands. Use `↑` / `↓` to navigate, `Enter` to select, `Escape` to dismiss.
 
 ### Non-interactive mode
 
@@ -127,6 +135,14 @@ Generate a starter template:
 node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff
 node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --no-lessons
 node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --no-boilerplate
+node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --solution
+node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --force
+```
+
+Check a file against Anvil directly:
+
+```bash
+node ./bin/huff-dojo.js --level 7 --file ./dojo-levels/level-07.huff --anvil --rpc-url http://127.0.0.1:8545
 ```
 
 ## Commands
@@ -146,8 +162,8 @@ node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --no-boi
 
 :progress                 show progress bar and completed/remaining counts
 :skip                     mark the current level done and move on without solving
-:reset                    reset the hint counter for this level
-:reset-progress           wipe all saved progress and start from level 1
+:reset                    reset the hint counter for this level back to hint 1
+:reset-progress           wipe all saved progress, delete all level files, and start from level 1
 
 :lessons on|off           show or hide lesson text when loading a level
 :boilerplate on|off       include or omit the CONSTRUCTOR scaffold in new templates
@@ -160,7 +176,7 @@ node ./bin/huff-dojo.js --template 7 --file ./dojo-levels/level-07.huff --no-boi
 :quit                     exit
 ```
 
-Anything typed that does not start with `:` is run through the opcode simulator for instant feedback. Practice can match the expected output, but advancing a level requires a compiled Huff file.
+Anything typed that does not start with `:` is run through the opcode simulator for instant feedback. Practice mode can match the expected output, but advancing a level requires a compiled Huff file.
 
 ## Progress
 
@@ -171,16 +187,16 @@ Progress is saved automatically per track:
 | Basic | `~/.huff-dojo-basic-progress.json` |
 | Advanced | `~/.huff-dojo-advanced-progress.json` |
 
-On next launch, choose a track and the game resumes at that track's first uncompleted level. If you have an older `~/.huff-dojo-progress.json`, Huff Dojo will read it as a legacy fallback.
+On next launch, choose a track and the game resumes at the first uncompleted level. An older `~/.huff-dojo-progress.json` is read as a legacy fallback.
 
 ```
 Resuming basic mode — [█████████░░░░░░░░░░░░░░░] 12/33 (36%)
 ```
 
-To start over:
+To wipe progress and delete all level files:
 
 ```
-[✓12] > :reset-progress
+[B 12] > :reset-progress
 ```
 
 ## Check pipeline
@@ -188,10 +204,10 @@ To start over:
 When a level is checked (on file save or `^S` in the TUI editor):
 
 1. **Compile** — runs `hnc -b` on the Huff file.
-2. **Simulate** — extracts the `MAIN` body, runs it through the built-in teaching EVM, and compares the final stack / return data / storage against the level's expected state.
+2. **Simulate** — extracts the `MAIN` body, runs it through the built-in teaching EVM, and compares the final stack / return data / storage / logs against the level's expected state.
 3. **Anvil** (optional, `:anvil on`) — deploys the compiled bytecode to a local Anvil node and calls the contract over JSON-RPC.
 
-All enabled checks must pass to win the level. The simulator is enough for practicing opcode logic; the compiler check is what confirms the Huff file itself is valid.
+All enabled checks must pass to win the level. The simulator is enough for practicing opcode logic; the compiler check confirms the Huff file itself is valid.
 
 ## Simulator opcodes
 
@@ -209,4 +225,4 @@ CALLVALUE PUSH @ok JUMPI PUSH0 PUSH0 REVERT ok: PUSH1 0x2a
 npm test
 ```
 
-Runs every Basic and Advanced reference solution through the simulator and verifies they pass.
+Runs every Basic and Advanced reference solution through the simulator and verifies they all pass.
