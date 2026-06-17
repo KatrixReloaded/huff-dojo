@@ -27,4 +27,5 @@
     // Your level body goes below.
     // Write your level solution here.
     // Example style: 0x2a 0x00 mstore 0x20 0x00 return
+    0x2a // ["0x2a"]
 }

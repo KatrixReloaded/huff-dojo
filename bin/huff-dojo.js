@@ -1288,8 +1288,14 @@ const style = {
   red: (text) => `\x1b[31m${text}\x1b[39m`,
   blue: (text) => `\x1b[34m${text}\x1b[39m`,
   magenta: (text) => `\x1b[35m${text}\x1b[39m`,
-  cyan: (text) => `\x1b[36m${text}\x1b[39m`
+  cyan: (text) => `\x1b[36m${text}\x1b[39m`,
+  brightMagenta: (text) => `\x1b[95m${text}\x1b[39m`,
+  brightCyan: (text) => `\x1b[96m${text}\x1b[39m`,
 };
+
+function stripAnsi(str) {
+  return str.replace(/\x1b\[[0-9;]*m/g, "");
+}
 
 function levelHeading(level) {
   return style.bold(style.cyan(`Level ${level.id}: ${level.title}`));
@@ -1442,11 +1448,47 @@ function interactiveHelp() {
   ].join("\n");
 }
 
+const HUFF_OPCODE_RE = /\b(PUSH(?:[1-9]|[12]\d|3[012])|POP|ADD|SUB|MUL|DIV|SDIV|MOD|SMOD|ADDMOD|MULMOD|EXP|SIGNEXTEND|LT|GT|SLT|SGT|EQ|ISZERO|AND|OR|XOR|NOT|BYTE|SHL|SHR|SAR|KECCAK256|SHA3|ADDRESS|BALANCE|ORIGIN|CALLER|CALLVALUE|CALLDATALOAD|CALLDATASIZE|CALLDATACOPY|CODESIZE|CODECOPY|GASPRICE|EXTCODESIZE|EXTCODECOPY|RETURNDATASIZE|RETURNDATACOPY|EXTCODEHASH|BLOCKHASH|COINBASE|TIMESTAMP|NUMBER|DIFFICULTY|PREVRANDAO|GASLIMIT|CHAINID|SELFBALANCE|BASEFEE|MLOAD|MSTORE|MSTORE8|SLOAD|SSTORE|JUMP|JUMPI|PC|MSIZE|GAS|JUMPDEST|RETURN|REVERT|STOP|INVALID|SELFDESTRUCT|LOG[0-4]|CALLCODE|DELEGATECALL|STATICCALL|CALL|CREATE2?|DUP(?:[1-9]|1[0-6])|SWAP(?:[1-9]|1[0-6]))\b/g;
+
+function huffHighlight(line) {
+  if (!line.trim()) return line;
+  const commentIdx = line.indexOf("//");
+  let code = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
+  const comment = commentIdx >= 0 ? line.slice(commentIdx) : "";
+  code = code.replace(/(#define|#include|#error|#constant)\b/g, (m) => style.magenta(m));
+  code = code.replace(/\b(macro|fn|takes|returns|constant)\b/g, (m) => style.dim(style.magenta(m)));
+  code = code.replace(HUFF_OPCODE_RE, (m) => style.bold(style.cyan(m)));
+  code = code.replace(/\b0x[0-9a-fA-F]+\b/g, (m) => style.yellow(m));
+  code = code.replace(/@[a-zA-Z_][a-zA-Z0-9_]*/g, (m) => style.brightCyan(m));
+  code = code.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*:)(?=\s|$)/g, (m, p1) => style.blue(p1));
+  return code + (comment ? style.dim(comment) : "") + "\x1b[0m";
+}
+
+function dojoLogo() {
+  const W = 39;
+  const boxWidth = W + 2;
+  const termWidth = process.stdout.columns || 80;
+  const indent = " ".repeat(Math.max(0, Math.floor((termWidth - boxWidth) / 2)));
+  const border = (s) => style.bold(style.magenta(s));
+  const top    = border("╔" + "═".repeat(W) + "╗");
+  const bottom = border("╚" + "═".repeat(W) + "╝");
+  const titleText = "H U F F   D O J O";
+  const subText   = "EVM Opcode Puzzle Training";
+  const titleL = Math.floor((W - titleText.length) / 2);
+  const titleR = W - titleText.length - titleL;
+  const subL   = Math.floor((W - subText.length) / 2);
+  const subR   = W - subText.length - subL;
+  const title  = style.bold(style.brightMagenta("H U F F")) + "   " + style.bold(style.brightCyan("D O J O"));
+  const sub    = style.dim(subText);
+  const row1 = border("║") + " ".repeat(titleL) + title + " ".repeat(titleR) + border("║");
+  const row2 = border("║") + " ".repeat(subL) + sub + " ".repeat(subR) + border("║");
+  return ["", indent + top, indent + row1, indent + row2, indent + bottom, ""].join("\n");
+}
+
 function startupText() {
-  return [
-    "Huff Dojo",
-    `${modeConfig().label} track selected. Type :help for commands. Use :code to solve the current level in the terminal.`
-  ].join("\n");
+  const rule = "  " + style.dim("─".repeat(54));
+  const info = `  ${style.bold(style.cyan(modeConfig().label + " Track"))}  ${style.dim("·  :help for commands  ·  :code to edit in-terminal")}`;
+  return [rule, info, rule].join("\n");
 }
 
 function normalizeWord(value) {
@@ -2236,9 +2278,11 @@ function compareExpected(level, state) {
 }
 
 function describeLevel(level) {
+  const rule = "  " + style.dim("─".repeat(52));
   const lines = [
     "",
     `  ${levelHeading(level)}`,
+    rule,
     "",
     `  ${sectionLabel("Objective")}`,
     `  ${level.prompt}`
@@ -2297,8 +2341,9 @@ function renderSimulatorResult(level, source, options = {}) {
   const lines = [""];
 
   if (verdict.pass && canWin) {
-    const msg = `  ${successText(`✓  Level ${level.id} cleared — Congratulations!`)}  `;
-    const bar = "  " + "═".repeat(msg.length - 2);
+    const rawWinText = `✓  Level ${level.id} cleared — Congratulations!`;
+    const msg = `  ${successText(rawWinText)}  `;
+    const bar = "  " + style.green("═".repeat(rawWinText.length + 2));
     lines.push(bar, "", msg, "", bar, "");
     const parts = [`Steps: ${state.steps}`, `Instructions: ${instructions.length}`];
     if (state.returnData.length) parts.push(`Return: ${returnHex(state.returnData)}`);
@@ -2345,13 +2390,34 @@ function progressBar(done, total, width = 24) {
 }
 
 function listLevels(completed = new Set()) {
-  return levels
-    .map((level) => {
-      const mark = completed.has(level.id) ? style.green("[x]") : style.dim("[ ]");
-      const num = String(level.id).padStart(2, "0");
-      return `${mark} ${style.bold(`${num}.`)} ${level.title}`;
-    })
-    .join("\n");
+  const pct = levels.length > 0 ? Math.round((completed.size / levels.length) * 100) : 0;
+  const header = `  ${sectionLabel(modeConfig().label + " Levels")}  ${style.dim(`${completed.size}/${levels.length} complete — ${pct}%`)}`;
+  const rule = "  " + style.dim("─".repeat(40));
+
+  const rows = levels.map((level) => {
+    const mark = completed.has(level.id) ? style.green("[x]") : style.dim("[ ]");
+    const num = String(level.id).padStart(2, "0");
+    const entry = `  ${mark} ${style.bold(`${num}.`)} ${level.title}`;
+    return { entry, visualLen: stripAnsi(entry).length };
+  });
+
+  let levelList;
+  if (levels.length > 16) {
+    const half = Math.ceil(levels.length / 2);
+    const colWidth = Math.max(...rows.slice(0, half).map((r) => r.visualLen)) + 3;
+    const lines = [];
+    for (let i = 0; i < half; i++) {
+      const left = rows[i];
+      const right = rows[i + half];
+      const pad = " ".repeat(Math.max(1, colWidth - left.visualLen));
+      lines.push(`${left.entry}${pad}${right ? right.entry : ""}`);
+    }
+    levelList = lines.join("\n");
+  } else {
+    levelList = rows.map((r) => r.entry).join("\n");
+  }
+
+  return [header, rule, levelList].join("\n");
 }
 
 function parseCommandLine(line) {
@@ -2817,7 +2883,9 @@ function runMiniEditor(level, filePath, initialContent) {
 
       // Header 1: level info (inverted)
       const info = ` ${levelHeading(level)}`;
-      out += "\x1b[7m" + info.slice(0, width).padEnd(width) + "\x1b[0m\r\n";
+      const infoVisualLen = 1 + stripAnsi(levelHeading(level)).length;
+      const infoPad = " ".repeat(Math.max(0, width - infoVisualLen));
+      out += "\x1b[7m" + info + infoPad + "\x1b[0m\r\n";
 
       // Header 2: file path (dim)
       out += "\x1b[2m " + filePath.slice(0, width - 1).padEnd(width - 1) + "\x1b[0m\r\n";
@@ -2831,9 +2899,8 @@ function runMiniEditor(level, filePath, initialContent) {
         const lineIdx = scrollRow + r;
         const lineNum = String(lineIdx < lines.length ? lineIdx + 1 : "").padStart(g);
         const marker = lineIdx < lines.length ? " " : "\x1b[2m~\x1b[0m";
-        const content = lineIdx < lines.length
-          ? (lines[lineIdx] ?? "").slice(0, width - g - 1)
-          : "";
+        const rawContent = lineIdx < lines.length ? (lines[lineIdx] ?? "").slice(0, width - g - 1) : "";
+        const content = lineIdx < lines.length ? huffHighlight(rawContent) : "";
         out += `\x1b[2m${lineNum}\x1b[0m${marker}${content}\x1b[K\r\n`;
       }
 
@@ -3175,9 +3242,9 @@ async function interactive() {
   const hintIndex = new Map();
 
   // ── mode selection ────────────────────────────────────────────────────────
-  output.write(`\n  ${style.bold(style.magenta("Huff Dojo"))}\n\n`);
-  output.write(`  ${style.bold("[1] Basic")}    — learn EVM opcodes and Huff from scratch (${basicLevels.length} levels)\n`);
-  output.write(`  ${style.bold("[2] Advanced")} — apply what you know to solve harder challenges (${advancedLevels.length} levels)\n\n`);
+  output.write(dojoLogo());
+  output.write(`  ${style.bold("[1]")} ${style.bold(style.brightCyan("Basic"))}    — learn EVM opcodes and Huff from scratch  ${style.dim(`(${basicLevels.length} levels)`)}\n`);
+  output.write(`  ${style.bold("[2]")} ${style.bold(style.brightCyan("Advanced"))} — apply what you know to solve harder challenges  ${style.dim(`(${advancedLevels.length} levels)`)}\n\n`);
 
   let chosenMode = null;
   while (!chosenMode) {
